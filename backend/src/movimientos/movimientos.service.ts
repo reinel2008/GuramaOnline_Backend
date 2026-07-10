@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateMovimientoDto } from './dto/create-movimiento.dto';
 import { UpdateMovimientoDto } from './dto/update-movimiento.dto';
@@ -75,20 +75,71 @@ export class MovimientosService {
   }
 
   // -------------------------------------------------------
-  // CREAR MOVIMIENTO
+  // CREAR MOVIMIENTO + ACTUALIZAR STOCK DEL PRODUCTO
   // -------------------------------------------------------
+  // IMPORTANTE: antes este método solo creaba el registro en
+  // `movimiento` y nunca tocaba `producto.stock_actual`. Eso
+  // causaba que el stock quedara desincronizado (incluso negativo)
+  // respecto al historial de movimientos.
+  //
+  // Ahora todo corre dentro de una transacción: si la actualización
+  // de stock falla (ej. producto no existe), el movimiento tampoco
+  // se crea — no queremos un movimiento "huérfano" sin su efecto
+  // correspondiente en el inventario.
   async create(dto: CreateMovimientoDto) {
     console.log('service - crear movimiento:', JSON.stringify(dto));
-    return this.prisma.movimiento.create({
-      data: {
-        Cantidad_m: dto.Cantidad_m,
-        fecha_m: new Date(),
-        observaciones: dto.observaciones ?? null,
-        id_m: dto.id_m === 'M-E' ? 'M_E' : 'M_S' as any,
-        id_producto: Number(dto.id_producto),
-        id_usuario: String(dto.id_usuario),
-        id_material: null,
-      },
+
+    const idProducto = Number(dto.id_producto);
+    const idMovimiento = dto.id_m === 'M-E' ? 'M_E' : 'M_S';
+
+    // M_E (entrada) suma al stock, M_S (salida) resta.
+    const signo = idMovimiento === 'M_E' ? 1 : -1;
+    const delta = signo * dto.Cantidad_m;
+
+    return this.prisma.$transaction(async (tx) => {
+      const producto = await tx.producto.findUnique({
+        where: { id_producto: idProducto },
+      });
+
+      if (!producto) {
+        throw new NotFoundException(
+          `No se puede registrar el movimiento: el producto con ID ${idProducto} no existe.`,
+        );
+      }
+
+      // Evita que una salida deje el stock en negativo por una
+      // condición de carrera (ej. doble tap del botón "Sumar/Restar").
+      if (idMovimiento === 'M_S' && producto.stock_actual + delta < 0) {
+        throw new BadRequestException(
+          `No hay suficiente stock de "${producto.nom_producto}" para registrar esta salida. ` +
+          `Stock actual: ${producto.stock_actual}, cantidad solicitada: ${dto.Cantidad_m}.`,
+        );
+      }
+
+      const movimiento = await tx.movimiento.create({
+        data: {
+          Cantidad_m: dto.Cantidad_m,
+          fecha_m: new Date(),
+          observaciones: dto.observaciones ?? null,
+          id_m: idMovimiento as any,
+          id_producto: idProducto,
+          id_usuario: String(dto.id_usuario),
+          id_material: null,
+        },
+      });
+
+      const productoActualizado = await tx.producto.update({
+        where: { id_producto: idProducto },
+        data: {
+          stock_actual: { increment: delta },
+          ultima_actualiz: new Date(),
+        },
+      });
+
+      return {
+        movimiento,
+        stock_actual: productoActualizado.stock_actual,
+      };
     });
   }
 
