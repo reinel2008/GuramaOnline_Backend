@@ -1,20 +1,22 @@
 import { Type } from 'class-transformer';
-import { IsString, IsNumber, IsOptional, IsIn } from 'class-validator';
+import { IsString, IsInt, Min, MaxLength, IsOptional, IsIn } from 'class-validator';
 
 export class CreateMovimientoDto {
-  @IsNumber()
+  @IsInt()
   @Type(() => Number)
+  @Min(1)
   Cantidad_m: number;
 
   @IsOptional()
   @IsString()
+  @MaxLength(250)
   observaciones?: string;
 
   @IsString()
   @IsIn(['M-E', 'M-S', 'M_E', 'M_S'])
   id_m: string;
 
-  @IsNumber()
+  @IsInt()
   @Type(() => Number)
   id_producto: number;
 

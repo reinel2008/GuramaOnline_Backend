@@ -8,25 +8,43 @@ export class FcmPushService {
     private readonly logger = new Logger(FcmPushService.name);
 
     constructor(private prisma: PrismaService) {
-        if (!getApps().length) {
-            initializeApp({
-            credential: cert({
-                projectId:   process.env.FIREBASE_PROJECT_ID,
-                clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-                privateKey:  process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-            }),
-            });
+        const hasFirebaseConfig =
+            !!process.env.FIREBASE_PROJECT_ID &&
+            !!process.env.FIREBASE_CLIENT_EMAIL &&
+            !!process.env.FIREBASE_PRIVATE_KEY;
+
+        if (hasFirebaseConfig) {
+            if (!getApps().length) {
+                initializeApp({
+                    credential: cert({
+                        projectId: process.env.FIREBASE_PROJECT_ID!,
+                        clientEmail: process.env.FIREBASE_CLIENT_EMAIL!,
+                        privateKey: process.env.FIREBASE_PRIVATE_KEY!.replace(/\\n/g, '\n'),
+                    }),
+                });
+            }
+        } else {
+            this.logger.warn(
+                'Firebase credentials not found. FCM push notifications are disabled.',
+            );
         }
+    }
+
+    async enviarAToken(token: string, titulo: string, cuerpo: string, data?: Record<string, string>) {
+        if (!getApps().length) {
+            this.logger.warn(
+                'Firebase app is not initialized. Skipping push notification.',
+            );
+            return;
         }
 
-        async enviarAToken(token: string, titulo: string, cuerpo: string, data?: Record<string, string>) {
         try {
             await getMessaging().send({
-            token,
-            notification: { title: titulo, body: cuerpo },
-            data: data ?? {},
-            android: { priority: 'high' },
-            apns: { payload: { aps: { sound: 'default' } } },
+                token,
+                notification: { title: titulo, body: cuerpo },
+                data: data ?? {},
+                android: { priority: 'high' },
+                apns: { payload: { aps: { sound: 'default' } } },
             });
         } catch (error: any) {
             this.logger.warn(`Error enviando push a token: ${error.message}`);

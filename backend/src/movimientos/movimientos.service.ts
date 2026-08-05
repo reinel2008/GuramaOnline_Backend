@@ -107,6 +107,16 @@ export class MovimientosService {
         );
       }
 
+      if (!producto.estado) {
+        throw new BadRequestException(
+          `No se puede registrar el movimiento: el producto con ID ${idProducto} está inactivo.`,
+        );
+      }
+
+      if (!Number.isInteger(dto.Cantidad_m) || dto.Cantidad_m <= 0) {
+        throw new BadRequestException('La cantidad ingresada no es válida.');
+      }
+
       // Evita que una salida deje el stock en negativo por una
       // condición de carrera (ej. doble tap del botón "Sumar/Restar").
       if (idMovimiento === 'M_S' && producto.stock_actual + delta < 0) {
@@ -176,7 +186,7 @@ export class MovimientosService {
     if (hasta) conditions.push(`fecha_m <= DATE_ADD('${hasta}', INTERVAL 1 DAY)`);
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
-    const results = await this.prisma.$queryRawUnsafe<any[]>(`
+    const results = await this.prisma.$queryRawUnsafe(`
       SELECT 
         SUM(CASE WHEN id_m = 'M-E' THEN Cantidad_m ELSE 0 END) as totalEntradas,
         SUM(CASE WHEN id_m = 'M-S' THEN Cantidad_m ELSE 0 END) as totalSalidas
@@ -194,7 +204,7 @@ export class MovimientosService {
     if (hasta) conditions.push(`fecha_m <= DATE_ADD('${hasta}', INTERVAL 1 DAY)`);
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
-    return this.prisma.$queryRawUnsafe<any[]>(`
+    return this.prisma.$queryRawUnsafe(`
       SELECT 
         DATE_FORMAT(fecha_m, '%Y-%m-%d') as fecha,
         SUM(CASE WHEN id_m = 'M-E' THEN Cantidad_m ELSE 0 END) as entradas,
@@ -214,7 +224,7 @@ export class MovimientosService {
     if (hasta) conditions.push(`fecha_m <= DATE_ADD('${hasta}', INTERVAL 1 DAY)`);
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
-    return this.prisma.$queryRawUnsafe<any[]>(`
+    return this.prisma.$queryRawUnsafe(`
       SELECT 
         CASE WHEN id_m = 'M-E' THEN 'Entrada' WHEN id_m = 'M-S' THEN 'Salida' END as tipo,
         COUNT(*) as cantidad,
@@ -233,7 +243,7 @@ export class MovimientosService {
     if (hasta) conditions.push(`m.fecha_m <= DATE_ADD('${hasta}', INTERVAL 1 DAY)`);
     const where = `WHERE ${conditions.join(' AND ')}`;
 
-    return this.prisma.$queryRawUnsafe<any[]>(`
+    return this.prisma.$queryRawUnsafe(`
       SELECT 
         p.id_producto,
         p.nom_producto as producto,

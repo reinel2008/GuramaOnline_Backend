@@ -5,14 +5,19 @@ import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
+import { existsSync, mkdirSync } from 'fs';
 import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.use(cookieParser());
   // archivos estáticos desde la carpeta "uploads"
-  app.useStaticAssets('C:/Users/angie/backend/uploads', {
-    prefix: '/uploads/', // Accede a las imágenes con /uploads/filename.jpg
+  const uploadsPath = join(process.cwd(), 'uploads');
+  if (!existsSync(uploadsPath)) {
+    mkdirSync(uploadsPath, { recursive: true });
+  }
+  app.useStaticAssets(uploadsPath, {
+    prefix: '/uploads/',
   });
 
   // solicitudes CORS 
@@ -56,6 +61,8 @@ async function bootstrap() {
     whitelist: false, // Elimina propiedades no definidas en los DTOs
   }));
 
-  await app.listen(3000);
+  const port = Number(process.env.PORT ?? 3000);
+  await app.listen(port);
+  console.log(`Server running on http://localhost:${port}`);
 }
 bootstrap();
