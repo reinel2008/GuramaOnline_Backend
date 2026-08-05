@@ -133,6 +133,19 @@ export class PedidosPersonalizadosService {
   }
 
   // --------------------------------------------------------
+  // DESACTIVAR MATERIAL
+  // --------------------------------------------------------
+  async desactivarMaterial(id: number) {
+    const material = await this.prisma.material.findUnique({ where: { id_material: id } });
+    if (!material) throw new NotFoundException(`Material ${id} no encontrado`);
+    if (!material.estado) throw new BadRequestException('El material ya se encuentra desactivado');
+
+    await this.prisma.material.update({ where: { id_material: id }, data: { estado: false } });
+
+    return { success: true, message: 'Material desactivado exitosamente' };
+  }
+
+  // --------------------------------------------------------
   // CREAR PEDIDO PERSONALIZADO
   // --------------------------------------------------------
   async crearPedido(dto: {
