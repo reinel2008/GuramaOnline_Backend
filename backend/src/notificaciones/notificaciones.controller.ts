@@ -14,10 +14,10 @@ export class NotificacionesController {
   @ApiResponse({ status: 200, description: 'Lista de notificaciones obtenida exitosamente.' })
   @ApiResponse({ status: 400, description: 'Datos inválidos.' })
 
-  findAll(@Query() query: any) {
+  async findAll(@Query() query: any) {
     console.log('controller - todas las notificaciones:', JSON.stringify(query));
     try {
-      return this.notificacionesService.findAll(query);
+      return await this.notificacionesService.findAll(query);
     } catch (error: any ) {
       if (
         error instanceof UnauthorizedException ||
@@ -36,10 +36,10 @@ export class NotificacionesController {
   @ApiResponse({ status: 200, description: 'Conteo generado con exito.'})
   @ApiResponse({ status: 500, description: 'Error interno al procesar datos' })
 
-  count(@Query() query: any) {
+  async count(@Query() query: any) {
     console.log('controller - contar notificaciones:', JSON.stringify(query));
     try {
-      return this.notificacionesService.count(query);
+      return await this.notificacionesService.count(query);
     }  catch (error: any) {
       if (
         error instanceof UnauthorizedException ||
@@ -58,10 +58,10 @@ export class NotificacionesController {
   @ApiResponse({ status: 200, description: 'Notificaciones de stock bajo obtenidas exitosamente.' })
   @ApiResponse({ status: 400, description: 'Datos inválidos.' })
 
-  stockBajo(@Query() query: any) {
+  async stockBajo(@Query() query: any) {
     console.log('controller - notificaciones de stock bajo:', JSON.stringify(query));
     try {
-      return this.notificacionesService.stockBajo(query);
+      return await this.notificacionesService.stockBajo(query);
     }catch (error: any) {
       if (
         error instanceof UnauthorizedException ||
@@ -80,10 +80,10 @@ export class NotificacionesController {
   @ApiResponse({ status: 200, description: 'Notificaciones de productos agotados obtenidas exitosamente.' })
   @ApiResponse({ status: 400, description: 'Datos inválidos.' })
 
-  agotados(@Query() query: any) {
+  async agotados(@Query() query: any) {
     console.log('controller - notificaciones de productos agotados:', JSON.stringify(query));
     try {
-      return this.notificacionesService.agotados(query);
+      return await this.notificacionesService.agotados(query);
     } catch (error: any) {
       if (
         error instanceof UnauthorizedException ||
@@ -102,10 +102,10 @@ export class NotificacionesController {
   @ApiResponse({ status: 200, description: 'Notificaciones de pedidos recientes obtenidas exitosamente.' })
   @ApiResponse({ status: 400, description: 'Datos inválidos.' })
 
-  pedidosRecientes(@Query('dias', new DefaultValuePipe(7), ParseIntPipe) dias: number,) {
+  async pedidosRecientes(@Query('dias', new DefaultValuePipe(7), ParseIntPipe) dias: number,) {
     console.log(`controller - notificaciones de pedidos recientes | días: ${dias}`);
     try {
-      return this.notificacionesService.pedidosRecientes(dias);
+      return await this.notificacionesService.pedidosRecientes(dias);
     } catch (error: any) {
       if (
         error instanceof UnauthorizedException ||
@@ -123,10 +123,10 @@ export class NotificacionesController {
   @ApiOperation({ summary: 'Estadísticas de notificaciones' })
   @ApiResponse({ status: 200, description: 'Estadísticas de notificaciones obtenidas exitosamente.' })
   @ApiResponse({ status: 500, description: 'Error interno al obtener los datos.' })
-  estadisticas(@Query() query: any) {
+  async estadisticas(@Query() query: any) {
     console.log('controller - estadísticas:', JSON.stringify(query));
     try {
-      return this.notificacionesService.estadisticas(query);
+      return await this.notificacionesService.estadisticas(query);
     } catch (error: any) {
       if (
         error instanceof UnauthorizedException ||

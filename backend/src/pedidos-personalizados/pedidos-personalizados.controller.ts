@@ -3,6 +3,7 @@ import { PedidosPersonalizadosService } from './pedidos-personalizados.service';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { Public } from '../auth/decorators/public.decorator';
 import { ApiBearerAuth, ApiSecurity, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Roles as RolesEnum } from '../auth/enums/roles.enum';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
@@ -19,31 +20,39 @@ export class PedidosPersonalizadosController {
     constructor(private readonly service: PedidosPersonalizadosService) {}
     
     // GET /pedidos-personalizados/materiales
-    @Public()
+    @Roles(RolesEnum.ADMIN, RolesEnum.TRABAJADOR)
     @Get('materiales')
     @ApiOperation({ summary: 'Obtener todos los materiales disponibles' })
     @ApiResponse({ status: 200, description: 'Lista de materiales obtenida exitosamente.' })
+    @ApiResponse({ status: 403, description: 'No tiene permisos para consultar materiales.' })
     @ApiResponse({ status: 500, description: 'Error al consultar materiales.' })
 
     async getMateriales(@Query() query: any) {
         try {
             return await this.service.getMateriales(query);
-        } catch (error) {
+        } catch (error: any) {
+            if (error instanceof UnauthorizedException || error instanceof ForbiddenException || error instanceof BadRequestException) {
+                throw error;
+            }
             throw new InternalServerErrorException('Error al obtener materiales');
         } 
     }
 
     // GET /pedidos-personalizados/materiales/:tipo
-    @Public()
+    @Roles(RolesEnum.ADMIN, RolesEnum.TRABAJADOR)
     @Get('materiales/:tipo')
     @ApiOperation({ summary: 'Obtener materiales por tipo' })
     @ApiResponse({ status: 200, description: 'Materiales obtenidos exitosamente.' })
+    @ApiResponse({ status: 403, description: 'No tiene permisos para consultar materiales.' })
     @ApiResponse({ status: 500, description: 'Error al consultar materiales por tipo.' })
 
     async getMaterialesPorTipo(@Param('tipo') tipo: string) {
         try {
             return await this.service.getMaterialesPorTipo(tipo);
-        } catch (error) {
+        } catch (error: any) {
+            if (error instanceof UnauthorizedException || error instanceof ForbiddenException || error instanceof BadRequestException) {
+                throw error;
+            }
             throw new InternalServerErrorException('Error al obtener materiales por tipo');
         }
     }
@@ -103,10 +112,12 @@ export class PedidosPersonalizadosController {
     }
 
     // PATCH /pedidos-personalizados/materiales/:id
+    @Roles(RolesEnum.ADMIN, RolesEnum.TRABAJADOR)
     @Patch('materiales/:id')
     @ApiOperation({ summary: 'Actualizar un material existente' })
     @ApiResponse({ status: 200, description: 'Material actualizado exitosamente.' })
     @ApiResponse({ status: 400, description: 'Datos de material inválidos.' })
+    @ApiResponse({ status: 403, description: 'No tiene permisos para editar materiales.' })
     @ApiResponse({ status: 404, description: 'Material no encontrado.' })
     @ApiResponse({ status: 409, description: 'Conflicto: Ya existe un material con ese nombre.' })
     @ApiResponse({ status: 500, description: 'Error al actualizar material.' })
@@ -132,7 +143,9 @@ export class PedidosPersonalizadosController {
         } catch (error: any) {
             if (
                 error instanceof NotFoundException ||
-                error instanceof BadRequestException
+                error instanceof BadRequestException ||
+                error instanceof ForbiddenException ||
+                error instanceof UnauthorizedException
             ) {
                 throw error;
             }
@@ -141,6 +154,31 @@ export class PedidosPersonalizadosController {
                 throw new ConflictException('Ya existe un material con ese nombre');
             }
             throw new InternalServerErrorException('Error al actualizar material');
+        }
+    }
+
+    // PATCH /pedidos-personalizados/materiales/:id/desactivar
+    @Roles(RolesEnum.ADMIN, RolesEnum.TRABAJADOR)
+    @Patch('materiales/:id/desactivar')
+    @ApiOperation({ summary: 'Desactivar un material existente' })
+    @ApiResponse({ status: 200, description: 'Material desactivado exitosamente.' })
+    @ApiResponse({ status: 400, description: 'El material ya se encuentra desactivado.' })
+    @ApiResponse({ status: 403, description: 'No tiene permisos para desactivar materiales.' })
+    @ApiResponse({ status: 404, description: 'Material no encontrado.' })
+    @ApiResponse({ status: 500, description: 'No fue posible desactivar el material.' })
+    async desactivarMaterial(@Param('id') id: string) {
+        try {
+            return await this.service.desactivarMaterial(+id);
+        } catch (error: any) {
+            if (
+                error instanceof NotFoundException ||
+                error instanceof BadRequestException ||
+                error instanceof ForbiddenException ||
+                error instanceof UnauthorizedException
+            ) {
+                throw error;
+            }
+            throw new InternalServerErrorException('No fue posible desactivar el material.');
         }
     }
 

@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsString, IsInt, Min, MaxLength, IsOptional, IsIn } from 'class-validator';
+import { IsString, IsInt, Min, MaxLength, IsOptional, IsIn, MinLength } from 'class-validator';
 
 export class CreateMovimientoDto {
   @IsInt()
@@ -9,6 +9,7 @@ export class CreateMovimientoDto {
 
   @IsOptional()
   @IsString()
+  @MinLength(1)
   @MaxLength(250)
   observaciones?: string;
 

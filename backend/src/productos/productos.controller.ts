@@ -3,7 +3,8 @@ import { ProductosService } from './productos.service';
 import { CreateProductoDto } from './dto/create-producto.dto';
 import { UpdateProductoDto } from './dto/update-producto.dto';
 import { ApiBearerAuth, ApiSecurity, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { Public } from '../auth/decorators/public.decorator';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { Roles as RolesEnum } from '../auth/enums/roles.enum';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
@@ -34,14 +35,19 @@ export class ProductosController {
 
   // GET /productos
   @Get()
-  @Public()
+  @Roles(RolesEnum.ADMIN, RolesEnum.TRABAJADOR)
   @ApiOperation({ summary: 'Obtener una lista de productos' })
   @ApiResponse({ status: 200, description: 'Catalogo de productos obtenida exitosamente.' })
+  @ApiResponse({ status: 401, description: 'No autorizado.' })
+  @ApiResponse({ status: 403, description: 'No tiene permisos para consultar el inventario.' })
 
   async findAll(@Query() query: any) {
     try {
       return await this.productosService.findAll(query);
     } catch (error: any) {
+      if (error instanceof UnauthorizedException || error instanceof ForbiddenException) {
+        throw error;
+      }
       throw new InternalServerErrorException('Error al obtener el catalogo de productos.');
     }
   }
@@ -72,10 +78,12 @@ export class ProductosController {
 
   // GET /productos/:id
   @Get(':id')
-  @Public()
+  @Roles(RolesEnum.ADMIN, RolesEnum.TRABAJADOR)
   @ApiOperation({ summary: 'Obtener un producto por ID' })
   @ApiResponse({ status: 200, description: 'Producto obtenido exitosamente.' })
   @ApiResponse({ status: 400, description: 'ID del producto inválido.' })
+  @ApiResponse({ status: 401, description: 'No autorizado.' })
+  @ApiResponse({ status: 403, description: 'No tiene permisos para consultar el inventario.' })
   @ApiResponse({ status: 404, description: 'Producto no encontrado.' })
   @ApiResponse({ status: 500, description: 'Error al obtener el producto.' })
 
@@ -88,7 +96,7 @@ export class ProductosController {
       }
       return producto;
     } catch (error: any) {
-      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+      if (error instanceof NotFoundException || error instanceof BadRequestException || error instanceof UnauthorizedException || error instanceof ForbiddenException) {
         throw error;
       }
       throw new InternalServerErrorException('Error al obtener el producto.');

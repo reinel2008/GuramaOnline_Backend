@@ -117,6 +117,10 @@ export class MovimientosService {
         throw new BadRequestException('La cantidad ingresada no es válida.');
       }
 
+      if (idMovimiento === 'M_S' && (!dto.observaciones || !dto.observaciones.trim())) {
+        throw new BadRequestException('Debe ingresar una justificación para este tipo de salida.');
+      }
+
       // Evita que una salida deje el stock en negativo por una
       // condición de carrera (ej. doble tap del botón "Sumar/Restar").
       if (idMovimiento === 'M_S' && producto.stock_actual + delta < 0) {
